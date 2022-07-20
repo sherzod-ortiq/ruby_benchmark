@@ -3,17 +3,17 @@ development:
   encoding: unicode
   host: db
   port: 5432
-  database: ruby_benchmark_development
+  database: ruby_benchmark_dev
+  username: ruby_benchmark_dev
+  password: ruby_benchmark_dev
   pool: 5
-  username: ruby_benchmark
-  password: password
 
 production:
   adapter: postgresql
   encoding: unicode
   host: db
   port: 5432
-  database: ruby_benchmark_production
+  database: ruby_benchmark_prod
+  username: ruby_benchmark_prod
+  password: ruby_benchmark_prod
   pool: 5
-  username: ruby_benchmark
-  password: password
