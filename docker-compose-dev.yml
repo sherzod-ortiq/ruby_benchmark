@@ -5,19 +5,44 @@ services:
   db:
     image: postgres
     volumes:
-      - ~/docker/volumes/ruby_benchmark/postgresql:/var/lib/postgresql/data
+      - ~/docker/volumes/ruby_benchmark/development/postgresql:/var/lib/postgresql/data
     hostname: "db"
     expose:
       - "5432"
     ports:
       - "5435:5432"
+    # Database name, user name, user password are taken from those environment variables.
+    # Database is created there and no need to run rake db:create.
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=ruby_benchmark_dev
       - POSTGRES_USER=ruby_benchmark_dev
       - POSTGRES_PASSWORD=ruby_benchmark_dev
 
+  redis:
+    image: redis
+    volumes:
+      - ~/docker/volumes/ruby_benchmark/development/redis:/data
+    hostname: "redis"
+    ports:
+      - "6379:6379"
+
+  sidekiq:
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/ruby_benchmark
+    environment:
+      - REDIS_URL_SIDEKIQ=redis://redis:6379/1
+    depends_on:
+      - redis
+    command: bash -c "bundle exec sidekiq -r ./worker.rb | tee -a ./log/sidekiq-development.log"
+
   web:
+    # Database conection is failing in the beginning, to fix that we need to restart app.
+    restart: always
     build:
       context: ./
       dockerfile: Dockerfile.dev
@@ -29,6 +54,8 @@ services:
       - "3000:3000"
     depends_on:
       - db
+      - redis
+      - sidekiq
     environment:
       - APP_ENV=development
       - POSTGRES_HOST=db
@@ -37,25 +64,4 @@ services:
       - POSTGRES_USER=ruby_benchmark_dev
       - POSTGRES_PASSWORD=ruby_benchmark_dev
       - REDIS_URL_SIDEKIQ=redis://redis:6379/1
-    command: bash -c "bundle exec rerun --background \"rackup config.ru --host 0.0.0.0 --port 3000\""
-
-  redis:
-    image: redis
-    volumes:
-      - ~/docker/volumes/ruby_benchmark/redis:/data
-    hostname: "redis"
-    ports:
-      - "6379:6379"
-    command: "redis-server"
-
-  sidekiq:
-    build:
-      context: ./
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./:/ruby_benchmark
-    environment:
-      - REDIS_URL_SIDEKIQ=redis://redis:6379/1
-    depends_on:
-      - redis
-    command: bash -c "bundle exec sidekiq -r ./worker.rb | tee -a ./log/sidekiq-development.log"
+    command: bash -c "bundle exec rake db:migrate && bundle exec rerun --background \"rackup config.ru --host 0.0.0.0 --port 3000\""

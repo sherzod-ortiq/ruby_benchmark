@@ -4,8 +4,6 @@
 Run:
 
 	docker-compose -f docker-compose-dev.yml up --build
-	docker-compose -f docker-compose-dev.yml run web rake db:create
-	docker-compose -f docker-compose-dev.yml run web rake db:migrate
 
 ### Route to benchmark ruby script:
 	localhost:3000/benchmark
